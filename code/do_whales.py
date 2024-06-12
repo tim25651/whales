@@ -29,7 +29,7 @@ from numpy.typing import NDArray
 from rdkit import Chem
 from rdkit.Chem import Mol  # pylint: disable=unused-import
 
-PRECISION = np.float32
+PRECISION = np.float64
 
 
 # -----------------------------------------------------------------------------
@@ -170,7 +170,7 @@ def extract_lcm(
     # Calculates percentiles according to the specified settings
     perc = range(start, end + 1, step)
 
-    x = np.percentile(data, list(perc), axis=0)
+    x = np.percentile(np.array(data), list(perc), axis=0)
 
     # Flattens preserving the ordering
     x = np.concatenate((x[:, 0], x[:, 1], x[:, 2]), axis=0)

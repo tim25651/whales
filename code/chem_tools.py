@@ -22,7 +22,7 @@ from rdkit.Chem import AllChem, Atom, Mol, rdmolops
 from rdkit.Chem.Draw import SimilarityMaps
 from rdkit.Chem.Scaffolds.MurckoScaffold import MurckoScaffoldSmiles
 
-PRECISION = np.float32
+PRECISION = np.float64
 
 
 def prepare_mol_from_sdf(

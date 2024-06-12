@@ -22,7 +22,7 @@ from rdkit import Chem
 from rdkit.Chem import AllChem, Atom, Mol
 from rdkit.Geometry import Point3D
 
-PRECISION = np.float32
+PRECISION = np.float64
 
 
 def get_coordinates_and_prop(

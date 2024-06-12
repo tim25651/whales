@@ -30,7 +30,7 @@ from typing import Dict, Tuple
 import numpy as np
 from numpy.typing import NDArray
 
-PRECISION = np.float32
+PRECISION = np.float64
 
 
 def lmahal(
@@ -204,4 +204,4 @@ def is_rem(
     rem = np.nanmean(dist_matrix, axis=1, dtype=PRECISION)  # row average
     ir_ratio = isol / rem  # ratio between isol and rem (transpose for dimensions)
 
-    return np.array(isol), np.array(rem), np.array(ir_ratio)
+    return isol, rem, ir_ratio
