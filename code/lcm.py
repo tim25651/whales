@@ -204,4 +204,4 @@ def is_rem(
     rem = np.nanmean(dist_matrix, axis=1, dtype=PRECISION)  # row average
     ir_ratio = isol / rem  # ratio between isol and rem (transpose for dimensions)
 
-    return isol, rem, ir_ratio
+    return np.array(isol), np.array(rem), np.array(ir_ratio)

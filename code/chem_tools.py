@@ -125,7 +125,7 @@ def opt_geometry(
     """Optimizes the geometry of a molecule, with the specified settings."""
     try:
         mol = rdmolops.AddHs(mol)
-        a = AllChem.EmbedMolecule(
+        conf_id = AllChem.EmbedMolecule(
             mol,
             useRandomCoords=True,
             useBasicKnowledge=True,
@@ -133,10 +133,10 @@ def opt_geometry(
             clearConfs=True,
             maxAttempts=max_attempts,
         )
-        if a != -1:
-            raise ValueError("Embedding failed")
 
-        AllChem.MMFFOptimizeMolecule(mol, maxIters=max_iter, mmffVariant=mmffvariant)
+        AllChem.MMFFOptimizeMolecule(
+            mol, maxIters=max_iter, mmffVariant=mmffvariant, confId=conf_id
+        )
 
         return mol, False
 

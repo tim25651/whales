@@ -40,11 +40,11 @@ def whales_from_mol(
     property_name: str = "",
 ) -> "Tuple[np.ndarray, list | None]":
     # check for correct molecule import, throw an error if import/sanitization fail
-
     mol = import_mol(mol)
+
     errors = 0
 
-    lab: "list | None" = None
+    lab: "List[str] | None" = None
     if not mol:
         x: NDArray[np.floating] = np.full((33,), -999.0, dtype=PRECISION)
         errors += 1
@@ -169,10 +169,11 @@ def extract_lcm(
 
     # Calculates percentiles according to the specified settings
     perc = range(start, end + 1, step)
+
     x = np.percentile(data, list(perc), axis=0)
-    x = np.concatenate(
-        (x[:, 0], x[:, 1], x[:, 2]), axis=0
-    )  # Flattens preserving the ordering
+
+    # Flattens preserving the ordering
+    x = np.concatenate((x[:, 0], x[:, 1], x[:, 2]), axis=0)
 
     # rounds the descriptors to the third decimal place
     x = np.round(x, 3)
