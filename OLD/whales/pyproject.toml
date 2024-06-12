@@ -1,0 +1,34 @@
+[project]
+name = "WHALES"
+version = "0.0.1"
+requires-python = ">=3.10, <3.11"
+authors = [
+    {name = "Tim Hörmann"},
+    {email = "t.hoermann@audivir.de"}
+]
+description = "Refactoring of WHALES fingerprint code"
+readme = "README.md"
+dependencies = [
+    "numpy",
+    "matplotlib",
+    "rdkit-doc-stubs",
+    "rdkit == 2023.3.1",
+    "tqdm",
+    "pandas",
+    "seaborn",
+    "scikit-learn",
+]
+
+[project.optional-dependencies]
+dev = []
+
+[project.urls]
+homepage = "https://www.audivir.de/"
+repository = "https://github.com/tim25651/whales"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include= ["whales*"]
+
+[tool.isort]
+profile = "black"
