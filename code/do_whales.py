@@ -6,26 +6,32 @@
 # molecules contained in an rdkit supplier.
 #
 # Francesca Grisoni, May 2018, ETH Zurich & University of Milano-Bicocca, francesca.grisoni@unimib.it
-# please cite as: 
-#   Francesca Grisoni, Daniel Merk, Viviana Consonni, Jan A. Hiss, Sara Giani Tagliabue, Roberto Todeschini & Gisbert Schneider 
-#   "Scaffold hopping from natural products to synthetic mimetics by holistic molecular similarity", 
+# please cite as:
+#   Francesca Grisoni, Daniel Merk, Viviana Consonni, Jan A. Hiss, Sara Giani Tagliabue, Roberto Todeschini & Gisbert Schneider
+#   "Scaffold hopping from natural products to synthetic mimetics by holistic molecular similarity",
 #   Nature Communications Chemistry 1, 44, 2018.
 # ======================================================================================================================
 
 import time
-from typing import Literal
+from typing import Literal, Tuple
+
+import lcm
+import mol_properties
 import numpy as np
 import pandas as ps
 import rdkit.Chem as Chem
-from rdkit.Chem import Mol
-from typing import Tuple
 from numpy.typing import NDArray
-import lcm
-import mol_properties
+from rdkit.Chem import Mol
 
 PRECISION = np.float32
+
+
 # ----------------------------------------------------------------------------------------------------------------------
-def whales_from_mol(mol: "Mol | None", charge_threshold:int=0, do_charge:bool=True, property_name:str=''
+def whales_from_mol(
+    mol: "Mol | None",
+    charge_threshold: int = 0,
+    do_charge: bool = True,
+    property_name: str = "",
 ) -> "Tuple[np.ndarray, list | None]":
     # check for correct molecule import, throw an error if import/sanitization fail
 
@@ -36,10 +42,12 @@ def whales_from_mol(mol: "Mol | None", charge_threshold:int=0, do_charge:bool=Tr
     if not mol:
         x: NDArray[np.floating] = np.full((33,), -999.0, dtype=PRECISION)
         errors += 1
-        print('Molecule not loaded.')
+        print("Molecule not loaded.")
     else:
         # coordinates and partial charges (checks for computed charges)
-        coords_w = mol_properties.get_coordinates_and_prop(mol, property_name, do_charge)
+        coords_w = mol_properties.get_coordinates_and_prop(
+            mol, property_name, do_charge
+        )
         if coords_w:  # no errors in charge
             coords, w = coords_w
             # does descriptors
@@ -47,7 +55,7 @@ def whales_from_mol(mol: "Mol | None", charge_threshold:int=0, do_charge:bool=Tr
         else:
             x = np.full((33,), -999.0, dtype=PRECISION)
             errors += 1
-            print('No computed charges.')
+            print("No computed charges.")
 
     return x, lab
 
@@ -60,11 +68,11 @@ def import_mol(mol: "Mol | None") -> "Mol | None":
 
     if mol is None:
         return None
-    
+
     else:
         # sanitize
         sanit_fail = Chem.SanitizeMol(mol, catchErrors=True, sanitizeOps=san_opt)
-        if sanit_fail: # type: ignore[truthy-bool]
+        if sanit_fail:  # type: ignore[truthy-bool]
             raise ValueError(sanit_fail)
             # err = 1
 
@@ -72,7 +80,9 @@ def import_mol(mol: "Mol | None") -> "Mol | None":
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-def do_lcd(coords: NDArray[np.floating], w: NDArray[np.floating], thr: float) -> "Tuple[np.ndarray, list]":
+def do_lcd(
+    coords: NDArray[np.floating], w: NDArray[np.floating], thr: float
+) -> "Tuple[np.ndarray, list]":
     """
     Core function for computing 3D LCD descriptors, starting from the coordinates and the partial charges.
     :param coords: molecular 3D coordinate matrix (n_at x 3)
@@ -96,7 +106,9 @@ def do_lcd(coords: NDArray[np.floating], w: NDArray[np.floating], thr: float) ->
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-def apply_sign(w: NDArray[np.floating], res: NDArray[np.floating], thr: float=0.0) -> NDArray[np.floating]:
+def apply_sign(
+    w: NDArray[np.floating], res: NDArray[np.floating], thr: float = 0.0
+) -> NDArray[np.floating]:
     """
     applies the sign to negatively charged atoms.
     :param w: partial charge
@@ -117,7 +129,13 @@ def apply_sign(w: NDArray[np.floating], res: NDArray[np.floating], thr: float=0.
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-def extract_lcm(data: NDArray[np.floating], start:int=0, end:int=100, step:int=10, lab_string:str='') -> "Tuple[NDArray[np.floating], list]":
+def extract_lcm(
+    data: NDArray[np.floating],
+    start: int = 0,
+    end: int = 100,
+    step: int = 10,
+    lab_string: str = "",
+) -> "Tuple[NDArray[np.floating], list]":
     """
     extracts descriptors referred to the whole molecule from numbers referred to atoms, e.g., R and I.
     ====================================================================================================================
@@ -136,17 +154,18 @@ def extract_lcm(data: NDArray[np.floating], start:int=0, end:int=100, step:int=1
     # Calculates percentiles according to the specified settings
     perc = range(start, end + 1, step)
     x = np.percentile(data, list(perc), axis=0)
-    x = np.concatenate((x[:, 0], x[:, 1], x[:, 2]), axis=0, dtype=PRECISION)  # Flattens preserving the ordering
+    x = np.concatenate(
+        (x[:, 0], x[:, 1], x[:, 2]), axis=0, dtype=PRECISION
+    )  # Flattens preserving the ordering
 
     # rounds the descriptors to the third decimal place
     x = np.round(x, 3)
 
     # produces labels strings
-    strings = ['R_', 'I_', 'IR_']
+    strings = ["R_", "I_", "IR_"]
     labels = list()
     for j in strings:
         for i in perc:
             labels.append(j + lab_string + str(int(i / 10)))
 
     return x, labels
-
