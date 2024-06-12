@@ -13,60 +13,66 @@
 # ======================================================================================================================
 
 import time
-
+from typing import Literal
 import numpy as np
 import pandas as ps
 import rdkit.Chem as Chem
-
+from rdkit.Chem import Mol
+from typing import Tuple
+from numpy.typing import NDArray
 import lcm
 import mol_properties
 
+PRECISION = np.float32
 # ----------------------------------------------------------------------------------------------------------------------
-def whales_from_mol(mol, charge_threshold=0, do_charge=True, property_name=''):
+def whales_from_mol(mol: "Mol | None", charge_threshold:int=0, do_charge:bool=True, property_name:str=''
+) -> "Tuple[np.ndarray, list | None]":
     # check for correct molecule import, throw an error if import/sanitization fail
 
-    mol, err = import_mol(mol)
+    mol = import_mol(mol)
     errors = 0
 
-    if err == 1:
-        x = np.full((33,), -999.0)
-        errors += err
+    lab: "list | None" = None
+    if not mol:
+        x: NDArray[np.floating] = np.full((33,), -999.0, dtype=PRECISION)
+        errors += 1
         print('Molecule not loaded.')
     else:
         # coordinates and partial charges (checks for computed charges)
-        coords, w, err = mol_properties.get_coordinates_and_prop(mol, property_name, do_charge)
-        if err == 0:  # no errors in charge
+        coords_w = mol_properties.get_coordinates_and_prop(mol, property_name, do_charge)
+        if coords_w:  # no errors in charge
+            coords, w = coords_w
             # does descriptors
             x, lab = do_lcd(coords, w, charge_threshold)
         else:
-            x = np.full((33,), -999.0)
+            x = np.full((33,), -999.0, dtype=PRECISION)
             errors += 1
             print('No computed charges.')
 
     return x, lab
 
 
-def import_mol(mol):
+def import_mol(mol: "Mol | None") -> "Mol | None":
     # options for sanitization
     san_opt = Chem.SanitizeFlags.SANITIZE_ALL ^ Chem.SanitizeFlags.SANITIZE_KEKULIZE
 
     # initialization
-    err = 0
 
     if mol is None:
-        err = 1
+        return None
+    
     else:
         # sanitize
         sanit_fail = Chem.SanitizeMol(mol, catchErrors=True, sanitizeOps=san_opt)
-        if sanit_fail:
+        if sanit_fail: # type: ignore[truthy-bool]
             raise ValueError(sanit_fail)
-            err = 1
+            # err = 1
 
-    return mol, err
+    return mol
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-def do_lcd(coords, w, thr):
+def do_lcd(coords: NDArray[np.floating], w: NDArray[np.floating], thr: float) -> "Tuple[np.ndarray, list]":
     """
     Core function for computing 3D LCD descriptors, starting from the coordinates and the partial charges.
     :param coords: molecular 3D coordinate matrix (n_at x 3)
@@ -90,7 +96,7 @@ def do_lcd(coords, w, thr):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-def apply_sign(w, res, thr=0):
+def apply_sign(w: NDArray[np.floating], res: NDArray[np.floating], thr: float=0.0) -> NDArray[np.floating]:
     """
     applies the sign to negatively charged atoms.
     :param w: partial charge
@@ -111,7 +117,7 @@ def apply_sign(w, res, thr=0):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-def extract_lcm(data, start=0, end=100, step=10, lab_string=''):
+def extract_lcm(data: NDArray[np.floating], start:int=0, end:int=100, step:int=10, lab_string:str='') -> "Tuple[NDArray[np.floating], list]":
     """
     extracts descriptors referred to the whole molecule from numbers referred to atoms, e.g., R and I.
     ====================================================================================================================
@@ -130,7 +136,7 @@ def extract_lcm(data, start=0, end=100, step=10, lab_string=''):
     # Calculates percentiles according to the specified settings
     perc = range(start, end + 1, step)
     x = np.percentile(data, list(perc), axis=0)
-    x = np.concatenate((x[:, 0], x[:, 1], x[:, 2]), axis=0)  # Flattens preserving the ordering
+    x = np.concatenate((x[:, 0], x[:, 1], x[:, 2]), axis=0, dtype=PRECISION)  # Flattens preserving the ordering
 
     # rounds the descriptors to the third decimal place
     x = np.round(x, 3)
