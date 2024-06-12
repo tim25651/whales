@@ -1,32 +1,38 @@
-# ======================================================================================================================
+"""
+# =====================================================================================
 # * Weighted Holistic Atom Localization and Entity Shape (WHALES) descriptors *
 #   v. 1, May 2018
-# ----------------------------------------------------------------------------------------------------------------------
-# This file contains all the necessary functions to calculate WHALES descriptors for the
+# -------------------------------------------------------------------------------------
+# This file contains all the necessary functions
+# to calculate WHALES descriptors for the
 # molecules contained in an rdkit supplier.
 #
-# Francesca Grisoni, May 2018, ETH Zurich & University of Milano-Bicocca, francesca.grisoni@unimib.it
+# Francesca Grisoni, May 2018, ETH Zurich & University of Milano-Bicocca,
+# francesca.grisoni@unimib.it
 # please cite as:
-#   Francesca Grisoni, Daniel Merk, Viviana Consonni, Jan A. Hiss, Sara Giani Tagliabue, Roberto Todeschini & Gisbert Schneider
-#   "Scaffold hopping from natural products to synthetic mimetics by holistic molecular similarity",
+#   Francesca Grisoni, Daniel Merk, Viviana Consonni,
+#   Jan A. Hiss, Sara Giani Tagliabue, Roberto Todeschini & Gisbert Schneider
+#   "Scaffold hopping from natural products to synthetic
+#   mimetics by holistic molecular similarity",
 #   Nature Communications Chemistry 1, 44, 2018.
-# ======================================================================================================================
+# =====================================================================================
+"""
 
-import time
-from typing import Literal, Tuple
+# pylint: disable=consider-using-assignment-expr
+
+from typing import List, Tuple
 
 import lcm
 import mol_properties
 import numpy as np
-import pandas as ps
-import rdkit.Chem as Chem
 from numpy.typing import NDArray
-from rdkit.Chem import Mol
+from rdkit import Chem
+from rdkit.Chem import Mol  # pylint: disable=unused-import
 
 PRECISION = np.float32
 
 
-# ----------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 def whales_from_mol(
     mol: "Mol | None",
     charge_threshold: int = 0,
@@ -69,29 +75,32 @@ def import_mol(mol: "Mol | None") -> "Mol | None":
     if mol is None:
         return None
 
-    else:
-        # sanitize
-        sanit_fail = Chem.SanitizeMol(mol, catchErrors=True, sanitizeOps=san_opt)
-        if sanit_fail:  # type: ignore[truthy-bool]
-            raise ValueError(sanit_fail)
-            # err = 1
+    # sanitize
+    sanit_fail = Chem.SanitizeMol(mol, catchErrors=True, sanitizeOps=san_opt)
+    if sanit_fail:  # type: ignore[truthy-bool]
+        raise ValueError(sanit_fail)
+        # err = 1
 
     return mol
 
 
-# ----------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 def do_lcd(
     coords: NDArray[np.floating], w: NDArray[np.floating], thr: float
 ) -> "Tuple[np.ndarray, list]":
     """
-    Core function for computing 3D LCD descriptors, starting from the coordinates and the partial charges.
-    :param coords: molecular 3D coordinate matrix (n_at x 3)
-    w(n_at x 1): molecular property to consider
-    :param w: partial charges
-    :param lcm_thr: threshold to be used to retain atoms (e.g., 0.001)
-    :return:
-    x_all: descriptors  for the molecules (1 x p)
-    lab_all: descriptors labels (1 x p)
+    Core function for computing 3D LCD descriptors,
+    starting from the coordinates and the partial charges.
+
+    Args:
+        coords: molecular 3D coordinate matrix (n_at x 3)
+        w: molecular property to consider (n_at x 1)
+        thr: threshold to be used to retain atoms (e.g., 0.001)
+
+    Returns:
+        A tuple containing:
+            x_all: descriptors  for the molecules (1 x p)
+            lab_all: descriptors labels (1 x p)
     """
 
     # calculates lcm with weight scheme 1 (all charges)
@@ -105,57 +114,64 @@ def do_lcd(
     return x_all, lab_all
 
 
-# ----------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 def apply_sign(
     w: NDArray[np.floating], res: NDArray[np.floating], thr: float = 0.0
 ) -> NDArray[np.floating]:
     """
     applies the sign to negatively charged atoms.
-    :param w: partial charge
-    :param res: computed atomic descriptors
-    :param thr: threshold to consider atoms as negatively charged (default is 0); other atoms are removed
-    :return: computed atomic descriptors with adjusted sign
+
+    Args:
+        w: partial charge
+        res: computed atomic descriptors
+        thr: threshold to consider atoms as negatively charged
+            (default is 0); other atoms are removed
+
+    Returns:
+        computed atomic descriptors with adjusted sign
     """
 
     # find negative weights and assigns a "-"
-    a, b = np.where(w < 0)
+    a, _ = np.where(w < 0)
     res[a, :] *= -1
 
     # removes atoms with abs(w) smaller than the thr
-    a, b = np.where(abs(w) < thr)
+    a, _ = np.where(abs(w) < thr)
     res = np.delete(res, a, 0)
 
     return res
 
 
-# ----------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 def extract_lcm(
     data: NDArray[np.floating],
     start: int = 0,
     end: int = 100,
     step: int = 10,
     lab_string: str = "",
-) -> "Tuple[NDArray[np.floating], list]":
+) -> "Tuple[NDArray[np.floating], List[str]]":
     """
-    extracts descriptors referred to the whole molecule from numbers referred to atoms, e.g., R and I.
-    ====================================================================================================================
-    :param:
-    data (n_atom x p): atomic description
-    start (int): minimum percentile (default = minimum value)
-    end (int): maximum percentile (default = maximum value)
-    step (int): step for percentiles generation (default, 10 corresponds to deciles)
-    lab_string(str): additional string to be added to differentiate weighting schemes
-    :returns
-    x(1 x p1): molecular description based on percentiles
-    labels(1 x p1): descriptor labels
-    ====================================================================================================================
+    extracts descriptors referred to the whole molecule from numbers referred to atoms,
+    e.g., R and I.
+
+    Args:
+        data: atomic description (n_atom x p)
+        start: minimum percentile (default = minimum value)
+        end: maximum percentile (default = maximum value)
+        step: step for percentiles generation (default, 10 corresponds to deciles)
+        lab_string: additional string to be added to differentiate weighting schemes
+
+    Returns:
+        A tuple containing:
+            x: molecular description based on percentiles (1 x p1)
+            labels: descriptor labels (1 x p1)
     """
 
     # Calculates percentiles according to the specified settings
     perc = range(start, end + 1, step)
     x = np.percentile(data, list(perc), axis=0)
     x = np.concatenate(
-        (x[:, 0], x[:, 1], x[:, 2]), axis=0, dtype=PRECISION
+        (x[:, 0], x[:, 1], x[:, 2]), axis=0
     )  # Flattens preserving the ordering
 
     # rounds the descriptors to the third decimal place
@@ -163,7 +179,7 @@ def extract_lcm(
 
     # produces labels strings
     strings = ["R_", "I_", "IR_"]
-    labels = list()
+    labels: list[str] = []
     for j in strings:
         for i in perc:
             labels.append(j + lab_string + str(int(i / 10)))

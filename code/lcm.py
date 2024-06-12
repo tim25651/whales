@@ -1,19 +1,30 @@
-# ======================================================================================================================
+"""
+# =====================================================================================
 # * Weighted Holistic Atom Localization and Entity Shape (WHALES) descriptors *
 #   v. 1, May 2018
-# ----------------------------------------------------------------------------------------------------------------------
-# This file contains all the necessary files to calculate atom centred mahalanobis descriptors.
-# Starting from the 3D coordinates and the partial charges of the molecules, the isolation degree, remoteness
+# -------------------------------------------------------------------------------------
+# This file contains all the necessary files to calculate
+# atom centred mahalanobis descriptors.
+# Starting from the 3D coordinates and the partial
+# charges of the molecules, the isolation degree, remoteness
 # and their ratio are computed.
-# The covariance is centered on each atom and weighted according to the partial charges of the selected surrounding
+# The covariance is centered on each atom and weighted according
+# to the partial charges of the selected surrounding
 # atoms.
 #
-# Francesca Grisoni, May 2018, ETH Zurich & University of Milano-Bicocca, francesca.grisoni@unimib.it
+# Francesca Grisoni, May 2018, ETH Zurich & University of Milano-Bicocca,
+# francesca.grisoni@unimib.it
 # please cite as:
-#   Francesca Grisoni, Daniel Merk, Viviana Consonni, Jan A. Hiss, Sara Giani Tagliabue, Roberto Todeschini & Gisbert Schneider
-#   "Scaffold hopping from natural products to synthetic mimetics by holistic molecular similarity",
+#   Francesca Grisoni, Daniel Merk, Viviana Consonni, Jan A. Hiss,
+#   Sara Giani Tagliabue, Roberto Todeschini & Gisbert Schneider
+#   "Scaffold hopping from natural products to synthetic mimetics
+#   by holistic molecular similarity",
 #   Nature Communications Chemistry 1, 44, 2018.
-# ======================================================================================================================
+# =====================================================================================
+"""
+
+# pylint: disable=consider-using-assignment-expr
+
 from typing import Dict, Tuple
 
 import numpy as np
@@ -26,19 +37,21 @@ def lmahal(
     x: "NDArray[np.floating]", w: "NDArray[np.floating]"
 ) -> "NDArray[np.floating]":
     """
-    main function for calculating the atom-centred mahalanobis distance (ACM), used to compute remoteness and
-    isolation degree.
+    main function for calculating the atom-centred mahalanobis distance (ACM),
+    used to compute remoteness and isolation degree.
 
-    ====================================================================================================================
-    :param
-    x(n_at x 3): molecular 3D coordinate matrix
-    w(n_at x 1): molecular property to consider
-    :return
-    res(n_at x 3): atomic descriptors; col 0 = Remoteness, col 1 = Isolation degree, col 2 = Isol/Remoteness
+    Args:
+        x: molecular 3D coordinate matrix (n_at x 3)
+        w: molecular property to consider (n_at x 1)
 
-    REF: Todeschini, et al. "Locally centred Mahalanobis distance: a new distance measure with salient features towards
+    Returns:
+        res(n_at x 3): atomic descriptors;
+        col 0 = Remoteness, col 1 = Isolation degree, col 2 = Isol/Remoteness
+
+    REF: Todeschini, et al. "Locally centred Mahalanobis distance:
+    a new distance measure with salient features towards
     outlier detection." Analytica chimica acta 787 (2013): 1-9.
-    ====================================================================================================================
+
     Francesca Grisoni, 12/2016, v. alpha
     ETH Zurich
     """
@@ -65,7 +78,7 @@ def lmahal(
             dist, n
         )  # calculates atomic parameters from the distance
         res: NDArray[np.floating] = np.concatenate(
-            (rem, isol, ir_ratio), axis=1, dtype=PRECISION
+            (rem, isol, ir_ratio), axis=1
         )  # results concatenation
     else:
         res = np.full((1, 3), -999.0, dtype=PRECISION)  # sets missing values
@@ -73,21 +86,22 @@ def lmahal(
     return res
 
 
-# ----------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 def docov(
     x: "NDArray[np.floating]", w: "NDArray[np.floating]"
 ) -> "Dict[Tuple[int,int], NDArray[np.floating]]":
     """
-    Calculates the weighted covariance matrix centered on each atom. The original centred covariance (Todeschini et al.
-    2013) is weighted according to the atomic partial charges (normalized absolute values).
+    Calculates the weighted covariance matrix centered on each atom.
+    The original centred covariance (Todeschini et al. 2013)
+    is weighted according to the atomic partial charges (normalized absolute values).
 
-    ====================================================================================================================
-    :param
-    x(n_at x 3): molecular 3D coordinate matrix
-    w(n_at x 1): molecular property to consider
-    :returns
-    cov(n_at x n_at): weighted atomic centred covariance
-    ====================================================================================================================
+    Args:
+        x: molecular 3D coordinate matrix (n_at x 3)
+        w: molecular property to consider (n_at x 1)
+
+    Returns:
+        cov(n_at x n_at): weighted atomic centred covariance
+
     Francesca Grisoni, 12/2016, v. alpha
     ETH Zurich
     """
@@ -103,7 +117,7 @@ def docov(
         den = n - 1
     else:
         den = sum(abs(w))
-        if den is 0:
+        if den == 0:
             den = n - 1
 
     w_abs = abs(w) / den
@@ -121,7 +135,7 @@ def docov(
     return cov
 
 
-# ----------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 
 def domahal(
@@ -131,14 +145,18 @@ def domahal(
     cov: "Dict[Tuple[int,int], NDArray[np.floating]]",
 ) -> NDArray[np.floating]:
     """
-    Calculates the atom centred Mahalanobis distance between two atoms i and j when the covariance is centered in j.
-    ====================================================================================================================
-    :param
-    i, j: atoms whose distance has to be computed (when the covariance is centred in j)
-    cov: centred covariance
-    :return
-    d: distance between i and j (centered in j)
-    ====================================================================================================================
+    Calculates the atom centred Mahalanobis distance between
+    two atoms i and j when the covariance is centered in j.
+
+    Args:
+        i: atoms whose distance has to be computed ...
+        j: ... (when the covariance is centred in j)
+        x: molecular 3D coordinate matrix (n_at x 3)
+        cov: centred covariance
+
+    Returns:
+        d: distance between i and j (centered in j)
+
     Francesca Grisoni, 12/2016, v. alpha
     ETH Zurich
     """
@@ -151,7 +169,7 @@ def domahal(
     return d  # type: ignore[no-any-return]
 
 
-# ----------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 
 def is_rem(
@@ -161,27 +179,29 @@ def is_rem(
 ):  # TODO remove n and calculate it here
     """
     Calculates isolation degree and remoteness from a distance matrix and their ratio.
-    ====================================================================================================================
-    :param
-    dist: atom-centred Mahalanobis
-    n: number of compounds
-    :returns
-    isol: isolation degree (column minimum)
-    rem: remoteness (row average)
-    ir_ratio: ratio between isolation degree and remoteness
-    ====================================================================================================================
+
+    Args:
+        dist: atom-centred Mahalanobis
+        n: number of compounds
+
+    Returns:
+        A tuple containing:
+            isol: isolation degree (column minimum)
+            rem: remoteness (row average)
+            ir_ratio: ratio between isolation degree and remoteness
+
     Francesca Grisoni, 12/2016, v. alpha
     ETH Zurich
     """
 
     for i in range(n):
-        dist[i, i] = None
+        dist[i, i] = np.nan
 
-    dist = np.matrix(dist)
+    dist_matrix = np.matrix(dist, dtype=PRECISION)
     isol = np.transpose(
-        np.nanmin(dist, axis=0)
+        np.nanmin(dist_matrix, axis=0)
     )  # col minimum (transposed for dimensions)
-    rem = np.nanmean(dist, axis=1)  # row average
+    rem = np.nanmean(dist_matrix, axis=1, dtype=PRECISION)  # row average
     ir_ratio = isol / rem  # ratio between isol and rem (transpose for dimensions)
 
     return isol, rem, ir_ratio
